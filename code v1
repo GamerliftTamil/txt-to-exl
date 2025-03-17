@@ -1,0 +1,44 @@
+import pandas as pd
+import os
+import re
+import tkinter as tk
+from tkinter import filedialog, messagebox
+
+# Initialize Tkinter (hide root window)
+root = tk.Tk()
+root.withdraw()
+
+try:
+    # Ask the user to select the input TXT file
+    file_path = filedialog.askopenfilename(title="Select a TXT file", filetypes=[("Text Files", "*.txt")])
+    if not file_path:
+        raise ValueError("No file selected. Please choose a valid TXT file.")
+
+    # Ask the user to choose the save location for the Excel file
+    excel_path = filedialog.asksaveasfilename(title="Save Excel File As", defaultextension=".xlsx",
+                                              filetypes=[("Excel Files", "*.xlsx")])
+    if not excel_path:
+        raise ValueError("No save location selected. Please choose a valid Excel file name.")
+
+    # Read and process the TXT file
+    with open(file_path, 'r', encoding='utf-8') as file:
+        lines = [re.split(r'\s+', line.strip()) for line in file if line.strip()]
+
+    if not lines:
+        raise ValueError("The input file is empty or contains only whitespace.")
+
+    # Find the max number of columns
+    max_columns = max(len(line) for line in lines)
+
+    # Ensure uniform column length
+    for line in lines:
+        line.extend([""] * (max_columns - len(line)))  # Pad shorter lines with empty strings
+
+    # Create a DataFrame and save as Excel
+    df = pd.DataFrame(lines)
+    df.to_excel(excel_path, index=False, header=False)
+
+    messagebox.showinfo("Success", f"Data successfully saved to:\n{excel_path}")
+
+except Exception as e:
+    messagebox.showerror("Error", f"Error processing the file:\n{e}")
