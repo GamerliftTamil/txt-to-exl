@@ -1,0 +1,72 @@
+import pandas as pd
+import os
+import re
+import tkinter as tk
+from tkinter import filedialog, messagebox
+
+# Initialize Tkinter (hide root window)
+root = tk.Tk()
+root.withdraw()
+
+try:
+    # Ask the user to select the input TXT file
+    file_path = filedialog.askopenfilename(title="Select a TXT file", filetypes=[("Text Files", "*.txt")])
+    if not file_path:
+        raise ValueError("No file selected. Please choose a valid TXT file.")
+
+    # Ask the user to choose the save location for the Excel file
+    excel_path = filedialog.asksaveasfilename(title="Save Excel File As", defaultextension=".xlsx",
+                                              filetypes=[("Excel Files", "*.xlsx")])
+    if not excel_path:
+        raise ValueError("No save location selected. Please choose a valid Excel file name.")
+
+    # Read the TXT file
+    with open(file_path, 'r', encoding='utf-8') as file:
+        lines = [line.strip() for line in file if line.strip()]
+
+    # Extract data dynamically
+    structured_data = []
+    subject_codes = []
+    
+    for i in range(0, len(lines), 2):  # Each student has 2 lines
+        first_line = re.split(r'\s+', lines[i])  # Extract ID, Gender, Name, Subject Codes, Pass/Fail
+        second_line = re.split(r'\s+', lines[i + 1])  # Extract marks & grades
+
+        # Extract individual components
+        student_id, gender, name = first_line[0], first_line[1], " ".join(first_line[2:-6])
+        subjects = first_line[-6:-1]  # Last 5 items are subject codes
+        pass_fail = first_line[-1]
+
+        # Save subject codes (first time only)
+        if not subject_codes:
+            subject_codes = subjects  # Store as headers
+
+        # Separate marks and grades
+        marks = [second_line[j] for j in range(0, len(second_line), 2)]
+        grades = [second_line[j+1] for j in range(0, len(second_line), 2)]
+
+        # Interleave marks and grades
+        row_data = [student_id, gender, name]
+        for mark, grade in zip(marks, grades):
+            row_data.extend([mark, grade])  # Each mark followed by its grade
+
+        row_data.append(pass_fail)  # Append Pass/Fail status
+
+        # Append student data
+        structured_data.append(row_data)
+
+    # Create DataFrame and set headers
+    headers = ["ID", "Gender", "Name"]
+    for sub in subject_codes:
+        headers.extend([sub, ""])  # Each subject has an empty column for grades
+    headers.append("Pass/Fail")
+
+    df = pd.DataFrame(structured_data, columns=headers)
+
+    # Save to Excel
+    df.to_excel(excel_path, index=False)
+
+    messagebox.showinfo("Success", f"Data successfully saved to:\n{excel_path}")
+
+except Exception as e:
+    messagebox.showerror("Error", f"Error processing the file:\n{e}")
