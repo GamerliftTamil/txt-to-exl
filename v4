@@ -1,0 +1,60 @@
+import pandas as pd
+import re
+import tkinter as tk
+from tkinter import filedialog, messagebox
+import os
+
+def process():
+    try:
+        file_path = filedialog.askopenfilename(title="Select CBSE Results TXT File", filetypes=[("Text Files", "*.txt")])
+        if not file_path:
+            return  
+        
+        save_path = filedialog.asksaveasfilename(title="Save Processed Results As", defaultextension=".xlsx", filetypes=[("Excel Files", "*.xlsx")])
+        if not save_path:
+            return  
+
+        with open(file_path, 'r', encoding='utf-8') as file:
+            content = file.read()
+
+        header_match = re.search(r'(date\s+[\d/-]+\s+c\.b\.s\.e.*?School:[^\n]+)', content, re.DOTALL)
+        school_info = header_match.group(1).replace('\n', ' ') if header_match else "CBSE Results"
+
+        students = []
+        records = re.finditer(r'(\d{8})\s+([MF])\s+([^\n]+?)\s+((?:\d{3}\s+)+)(pass|fail)[\s\S]*?((?:\d{3}\s+[a-z]\d\s*)+)', content, re.DOTALL)
+        
+        for record in records:
+            roll_no, gender, name, marks_str, result, grades_str = record.groups()
+            marks = marks_str.strip().split()
+            grades = re.findall(r'(\d{3})\s+([a-z]\d)', grades_str)
+
+            student_data = {'Roll No': roll_no,'Name': name, 'Gender': gender,  'Result': result}
+            for (code, grade), mark in zip(grades, marks):
+                student_data[f'{code}_marks'] = mark
+                student_data[f'{code}_grade'] = grade
+            students.append(student_data)
+        
+        if not students:
+            raise ValueError("No valid student records found!")
+
+        df = pd.DataFrame(students)
+        columns_order = [col for col in df.columns if col != "Result"] + ["Result"]
+        df = df[columns_order]
+
+        with pd.ExcelWriter(save_path, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, startrow=2, header=False)
+            sheet = writer.sheets['Sheet1']
+            sheet.cell(row=1, column=1, value=school_info)
+            
+            for col_num, value in enumerate(df.columns.values, 1):
+                sheet.cell(row=2, column=col_num, value=value)
+        
+        messagebox.showinfo("Success", f"Results saved as {os.path.basename(save_path)}")
+    
+    except Exception as e:
+        messagebox.showerror("Error", str(e))
+if __name__ == "__main__":
+    root = tk.Tk()
+    process()
+    root.destroy()
+
