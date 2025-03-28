@@ -1,6 +1,10 @@
-
-
-
+date -12/5/23 c.b.s.e -all india secondary school examination(main)-2023 region : Chennai            page:1
+                        **********(scjool/roll no wise crazette)*********
+  roll.fs name of candidate    subject   result                  comp
+      no no                   sub cd sub cd sub cd sub cd sub cd  
+           MKSGR MKSGR MKSGR MKSGR MKSGR MKSGR
+     School:55339.velammal vidhyashram surapt Chennai Tamil nadu 
+        
 92919291 M arun humar        812 006 293 923 233                  pass
                           023 c1 034 b1 054 a1 033 b1 013 d1 
 
@@ -8,3 +12,19 @@
                           023 c1 034 b1 054 a1 033 b1 013 d1 
 92917291 M arun kumar        812 006 293 923 233                  pass
                           023 c1 034 b1 054 a1 033 b1 013 d1 
+
+
+date -12/5/23 c.b.s.e -all india secondary school examination(main)-2023 region : Chennai            page:2
+                        **********(scjool/roll no wise crazette)*********
+  roll.fs name of candidate    subject   result                  comp
+      no no                   sub cd sub cd sub cd sub cd sub cd  
+           MKSGR MKSGR MKSGR MKSGR MKSGR MKSGR
+     School:55339.velammal vidhyashram surapt Chennai Tamil nadu 
+        
+92919291 M abyn hum        812 006 293 923 233                  pass
+                         023 c1 034 b1 054 a1 033 b1 013 d1 
+
+92918291 M afnsd bmar        812 006 293 923 233                  pass
+                          023 c1 034 b1 054 a1 033 b1 013 d1 
+92917291 M akurnun kum        812 006 293 923 233                  pass
+                          023 c1 034 b1 054 a1 033 b1 013 d1  
