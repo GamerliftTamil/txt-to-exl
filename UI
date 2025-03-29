@@ -1,0 +1,129 @@
+from customtkinter import *
+import pandas as pd
+import os
+import webbrowser  # For opening the PDF file
+
+# Excel file path
+EXCEL_FILE = "E:/espresso.xlsx"  # Added .xlsx extension
+
+# Function to check if the file exists, and create it if not
+def initialize_excel():
+    if not os.path.exists(EXCEL_FILE):
+        df = pd.DataFrame(columns=["Email", "Password"])
+        df.to_excel(EXCEL_FILE, index=False)
+
+# Function to open subject code PDF
+def open_subject_code():
+    subject_code_url = "https://www.cbse.gov.in/newsite/attach/SUB1017.pdf"
+    try:
+        webbrowser.open(subject_code_url)
+    except Exception as e:
+        # Fallback option if webbrowser fails
+        error_window = CTk()
+        error_window.geometry("300x100")
+        error_window.title("Error")
+        CTkLabel(error_window, text="Could not open the PDF file").pack(pady=20)
+        CTkButton(error_window, text="OK", command=error_window.destroy).pack()
+        error_window.mainloop()
+
+# Login window
+def open_login_window():
+    global login_window
+    app.destroy()
+    login_window = CTk()
+    login_window.geometry("500x550")  # Increased height for new button
+    login_window.title("Login")
+    login_window.resizable(False, False)
+    thin_font = CTkFont(family="Helvetica", size=20, weight="normal")
+    set_appearance_mode("light")
+    login_window.configure(bg="black")
+    
+    CTkLabel(login_window, text="Login", font=thin_font).pack(pady=20)
+    
+    email_entry = CTkEntry(login_window, placeholder_text="Enter Email", width=200)
+    email_entry.pack(pady=20)
+    
+    password_entry = CTkEntry(login_window, placeholder_text="Enter Password", width=200, show="*")
+    password_entry.pack(pady=20)
+    
+    def verify_login():
+        email = email_entry.get()
+        password = password_entry.get()
+
+        try:
+            df = pd.read_excel(EXCEL_FILE)  # Load user data
+            if ((df["Email"] == email) & (df["Password"] == password)).any():
+                login_window.destroy()
+                open_dashboard()
+            else:
+                CTkLabel(login_window, text="Invalid Credentials!", text_color="red").pack()
+        except Exception as e:
+            CTkLabel(login_window, text="Login Error", text_color="red").pack()
+
+    CTkButton(login_window, text="Login", fg_color="black", hover_color="navy", command=verify_login).pack(pady=20)
+    CTkButton(login_window, text="Subject Code PDF", fg_color="black", hover_color="navy", command=open_subject_code).pack(pady=20)
+    
+    login_window.mainloop()
+
+# Dashboard
+def open_dashboard():
+    dashboard = CTk()
+    dashboard.geometry("500x500")
+    dashboard.title("Dashboard")
+    dashboard.resizable(False, False) 
+    thin_font = CTkFont(family="Helvetica", size=20, weight="normal")   
+    set_appearance_mode("light")
+    dashboard.configure(bg="black")
+    CTkLabel(dashboard, text="Welcome!", font=thin_font).pack(pady=20)
+    dashboard.mainloop()
+
+# Registration
+def register():
+    email = username_entry.get()
+    password = password_entry.get()
+    
+    if email and password:
+        try:
+            df = pd.read_excel(EXCEL_FILE)  # Load existing data
+            if email in df["Email"].values:
+                result_label.configure(text="User already exists!", text_color="red")
+                return
+            
+            # Add new user and save to Excel
+            new_user = pd.DataFrame([[email, password]], columns=["Email", "Password"])
+            df = pd.concat([df, new_user], ignore_index=True)
+            df.to_excel(EXCEL_FILE, index=False)
+            
+            open_login_window()  # Open login page after registration
+        except Exception as e:
+            result_label.configure(text="Registration error", text_color="red")
+    else:
+        result_label.configure(text="Enter both fields!", text_color="red")
+
+# Initialize the Excel file
+initialize_excel()
+
+# Main registration window
+app = CTk()
+app.geometry("500x500")
+app.title("Register")
+app.resizable(False, False)
+thin_font = CTkFont(family="Helvetica", size=20, weight="normal")
+set_appearance_mode("light")
+app.configure(bg="black")
+
+CTkLabel(app, text="Create an Account", font=thin_font).pack(padx=50, pady=20)
+
+username_entry = CTkEntry(app, placeholder_text="Enter Email", width=200)
+username_entry.pack(pady=20)
+
+password_entry = CTkEntry(app, placeholder_text="Enter Password", width=200, show="*")
+password_entry.pack(pady=20)
+
+result_label = CTkLabel(app, text="", text_color="red")
+result_label.pack()
+
+CTkButton(app, text="Register", hover_color="navy", fg_color="black", command=register).pack(pady=20)
+CTkButton(app, text="Already Registered?", hover_color="navy", fg_color="black", command=open_login_window).pack(pady=20)
+
+app.mainloop()
