@@ -42,138 +42,9 @@ def error_popup(title, message):
     CTkLabel(error_window, text=message, text_color="red", wraplength=250).pack(pady=20)
     CTkButton(error_window, text="OK", command=error_window.destroy).pack(pady=10)
     
-    # Make sure to handle window closing properly
     error_window.protocol("WM_DELETE_WINDOW", error_window.destroy)
     error_window.mainloop()
 
-def verify_login():
-    email = email_entry.get().strip()
-    password = password_entry.get().strip()
-
-    if not email or not password:
-        error_popup("Login Error", "Please enter both email and password!")
-        return
-    
-    if not validate_email(email):
-        error_popup("Login Error", "Please enter a valid email address!")
-        return
-    
-    try:
-        user = auth.sign_in_with_email_and_password(email, password)
-        print("Login Successful:", user)
-        if login_window.winfo_exists():
-            login_window.destroy()
-        open_dashboard()
-    except Exception as e:
-        error_msg = str(e)
-        print("Firebase Error:", error_msg)
-        
-        if "INVALID_EMAIL" in error_msg:
-            error_popup("Login Error", "Invalid email format!")
-        elif "INVALID_PASSWORD" in error_msg or "MISSING_PASSWORD" in error_msg:
-            error_popup("Login Error", "Invalid password!")
-        else:
-            error_popup("Login Error", "Login failed. Please try again.")
-
-def open_subject_code():
-    url = "https://www.cbse.gov.in/newsite/attach/SUB1017.pdf"
-    try:
-        webbrowser.open(url)
-    except Exception as e:
-        error_popup("Error", f"Could not open the PDF file: {str(e)}")
-
-
-def process():
-    try:
-        file_path = filedialog.askopenfilename(title="Select CBSE Results TXT File", 
-                                              filetypes=[("Text Files", "*.txt")])
-        if not file_path:
-            return  
-        
-        save_path = filedialog.asksaveasfilename(title="Save Processed Results As",  defaultextension=".xlsx",  filetypes=[("Excel Files", "*.xlsx")])
-        if not save_path:
-            return  
-
-        with open(file_path, 'r', encoding='utf-8') as file:
-            content = file.read()
-
-        # Extract school info from header
-        header_match = re.search(r'(date\s+[\d/-]+\s+c\.b\.s\.e.*?School:[^\n]+)', content, re.DOTALL)
-        school_info = header_match.group(1).replace('\n', ' ') if header_match else "CBSE Results"
-
-        students = []
-        records = re.finditer(r'(\d{8})\s+([MF])\s+([^\n]+?)\s+((?:\d{3}\s+)+)(pass|fail)[\s\S]*?((?:\d{3}\s+[a-z]\d\s*)+)', content, re.DOTALL)
-        
-        for record in records:
-            roll_no, gender, name, marks_str, result, grades_str = record.groups()
-            
-            # Extract marks (these are actually the subject codes that need to be swapped)
-            wrong_marks = marks_str.strip().split()
-            
-            # Extract grades (these contain both subject codes and grades)
-            grade_pairs = re.findall(r'(\d{3})\s+([a-z]\d)', grades_str)
-            
-            student_data = {
-                'Roll No': roll_no, 
-                'Name': name, 
-                'Gender': gender, 
-                'Result': result
-            }
-            
-            # The "marks" we extracted earlier are actually subject codes
-            # The real marks are in the grade_pairs
-            # So we need to swap them
-            for i, (code, grade) in enumerate(grade_pairs):
-                if i < len(wrong_marks):
-                    # The actual mark is the code from grade_pairs
-                    # The actual subject code is in wrong_marks
-                    student_data[f'Sub {wrong_marks[i]} Marks'] = code
-                    student_data[f'Sub {wrong_marks[i]} Grade'] = grade
-            
-            students.append(student_data)
-        
-        if not students:
-            raise ValueError("No valid student records found!")
-
-        df = pd.DataFrame(students)
-        
-        # Reorder columns logically
-        base_columns = ['Roll No', 'Name', 'Gender']
-        subject_columns = []
-        
-        # Collect all subject columns
-        for col in df.columns:
-            if col.startswith('Sub') and 'Marks' in col:
-                sub_code = col.split()[1]
-                subject_columns.extend([
-                    f'Sub {sub_code} Marks',
-                    f'Sub {sub_code} Grade'
-                ])
-        
-        # Final column order
-        columns_order = base_columns + subject_columns + ['Result']
-        df = df[columns_order]
-
-        # Create Excel file
-        writer = pd.ExcelWriter(save_path, engine='openpyxl')
-        df.to_excel(writer, index=False, startrow=2, header=False)
-        
-        workbook = writer.book
-        worksheet = writer.sheets['Sheet1']
-        
-        # Add header information
-        worksheet.cell(row=1, column=1, value=school_info)
-        
-        # Write column headers
-        for col_num, value in enumerate(df.columns.values, 1):
-            worksheet.cell(row=2, column=col_num, value=value)
-        
-        writer.close()
-        
-        messagebox.showinfo("Success", f"Results saved as {os.path.basename(save_path)}")
-    
-    except Exception as e:
-        messagebox.showerror("Error", f"An error occurred: {str(e)}")
 def open_login_window():
     global email_entry, password_entry, login_window
     
@@ -186,8 +57,6 @@ def open_login_window():
     login_window.resizable(False, False)
     set_appearance_mode("light")
     login_window.configure(bg=BG_COLOR)
-    
-    # Handle window closing properly
     login_window.protocol("WM_DELETE_WINDOW", login_window.destroy)
 
     CTkLabel(login_window, text="Login", font=("Helvetica", 20)).pack(pady=20)
@@ -205,6 +74,135 @@ def open_login_window():
     
     login_window.mainloop()
 
+def verify_login():
+    print(f"Logging in with Email: {email_entry.get()}, Password: {password_entry.get()}")
+    try:
+        user = auth.sign_in_with_email_and_password(email_entry.get(), password_entry.get())
+        print("Login Successful!")
+        login_window.destroy()
+        open_dashboard()
+    except Exception as e:
+        print("Firebase Error:", str(e))
+        error_popup("Login Failed", "Invalid email or password. Please try again.")
+
+def open_subject_code():
+    url = "https://www.cbse.gov.in/newsite/attach/SUB1017.pdf"
+    try:
+        webbrowser.open(url)
+    except Exception as e:
+        error_popup("Error", f"Could not open the PDF file: {str(e)}")
+
+def process():
+    try:
+        file_path = filedialog.askopenfilename(title="Select CBSE Results TXT File", 
+                                              filetypes=[("Text Files", "*.txt")])
+        if not file_path:
+            return  
+        
+        save_path = filedialog.asksaveasfilename(title="Save Processed Results As",  
+                                               defaultextension=".xlsx",  
+                                               filetypes=[("Excel Files", "*.xlsx")])
+        if not save_path:
+            return  
+
+        with open(file_path, 'r', encoding='utf-8') as file:
+            content = file.read()
+
+        # Extract complete school information including date, region, etc.
+        header_match = re.search(r'DATE:- (.*?)C\.B\.S\.E\. - (.*?)REGION: (.*?)PAGE:-', content)
+        school_match = re.search(r'SCHOOL : - (\d+)\s+([^\n]+)', content)
+        
+        school_info = ""
+        if header_match:
+            date, exam_info, region = header_match.groups()
+            school_info += f"Date: {date.strip()} | Exam: {exam_info.strip()} | Region: {region.strip()}\n"
+        if school_match:
+            school_code, school_name = school_match.groups()
+            school_info += f"School Code: {school_code} | School Name: {school_name.strip()}"
+        
+        # Process student records
+        students = []
+        # This pattern handles the repeated headers by looking for the student record pattern
+        records = re.finditer(
+            r'(\d{8})\s+([MF])\s+([^\n]+?)\s+((?:\d{3}\s+)+)\s+(PASS|FAIL)\s+.*?\n\s*((?:\d{3}\s+[A-Z]\d\s+)+)',
+            content,
+            re.DOTALL
+        )
+        
+        for record in records:
+            roll_no, gender, name, subject_codes, result, grades_str = record.groups()
+            name = ' '.join(name.split())
+            subject_codes = subject_codes.strip().split()
+            grade_pairs = re.findall(r'(\d{3})\s+([A-Z]\d)', grades_str)
+            
+            student_data = {
+                'Roll No': roll_no, 
+                'Name': name, 
+                'Gender': gender, 
+                'Result': result
+            }
+            
+            for i, (code, grade_pair) in enumerate(zip(subject_codes, grade_pairs)):
+                if i < len(grade_pairs):
+                    marks, grade = grade_pair
+                    student_data[f'Sub {code} Marks'] = marks
+                    student_data[f'Sub {code} Grade'] = grade
+            
+            students.append(student_data)
+        
+        if not students:
+            raise ValueError("No valid student records found!")
+
+        df = pd.DataFrame(students)
+        
+        # Reorder columns
+        base_columns = ['Roll No', 'Name', 'Gender']
+        subject_columns = []
+        
+        for col in df.columns:
+            if col.startswith('Sub') and 'Marks' in col:
+                sub_code = col.split()[1]
+                subject_columns.extend([f'Sub {sub_code} Marks', f'Sub {sub_code} Grade'])
+        
+        columns_order = base_columns + subject_columns + ['Result']
+        df = df[columns_order]
+
+        # Create Excel file with proper formatting
+        writer = pd.ExcelWriter(save_path, engine='openpyxl')
+        df.to_excel(writer, index=False, startrow=4, header=False)  # Leave space for header info
+        
+        workbook = writer.book
+        worksheet = writer.sheets['Sheet1']
+        
+        # Add school information as merged cells at the top
+        worksheet.merge_cells('A1:Z1')
+        worksheet.merge_cells('A2:Z2')
+        
+        header_cell = worksheet['A1']
+        header_cell.value = school_info.split('\n')[0]
+        header_cell.font = Font(bold=True)
+        header_cell.alignment = Alignment(horizontal='center')
+        
+        school_cell = worksheet['A2']
+        school_cell.value = school_info.split('\n')[1] if '\n' in school_info else ""
+        school_cell.font = Font(bold=True)
+        school_cell.alignment = Alignment(horizontal='center')
+        
+        # Write column headers
+        for col_num, value in enumerate(df.columns.values, 1):
+            cell = worksheet.cell(row=4, column=col_num, value=value)
+            cell.font = Font(bold=True)
+        
+        # Freeze the header row
+        worksheet.freeze_panes = 'A5'
+        
+        writer.close()
+        
+        messagebox.showinfo("Success", f"Results saved as {os.path.basename(save_path)}")
+    
+    except Exception as e:
+        messagebox.showerror("Error", f"An error occurred: {str(e)}")
+
 def open_dashboard():
     dashboard = CTk()
     dashboard.geometry("600x400")
@@ -212,12 +210,9 @@ def open_dashboard():
     dashboard.resizable(False, False)
     set_appearance_mode("light")
     dashboard.configure(bg=BG_COLOR)
-    
-    # Handle window closing properly
     dashboard.protocol("WM_DELETE_WINDOW", dashboard.destroy)
 
     CTkLabel(dashboard, text="Welcome to CBSE Results Converter", font=("Helvetica", 20)).pack(pady=30)
-    
     CTkButton(dashboard, text="Convert TXT to Excel", fg_color=FG_COLOR, hover_color=HOVER_COLOR, 
               command=process, width=200, height=40).pack(pady=20)
     
@@ -230,22 +225,20 @@ def register():
     if not email or not password:
         error_popup("Registration Error", "Please enter both email and password!")
         return
-    
+
     if not validate_email(email):
         error_popup("Registration Error", "Please enter a valid email address!")
         return
-    
+
     try:
         user = auth.create_user_with_email_and_password(email, password)
-        print("User Created Successfully:", user)
-        messagebox.showinfo("Success", "Account created successfully! Please log in.")
-        if app.winfo_exists():
-            app.destroy()
+        messagebox.showinfo("Success", "Account created! Login now.")
+        app.withdraw()
         open_login_window()
     except Exception as e:
         error_message = str(e)
         print("Firebase Error:", error_message)
-        
+
         if "EMAIL_EXISTS" in error_message:
             error_popup("Registration Error", "Email is already registered!")
         elif "INVALID_EMAIL" in error_message:
@@ -255,14 +248,14 @@ def register():
         else:
             error_popup("Registration Error", "Something went wrong. Try again later.")
 
-# Main application
+# Main Application
 app = CTk()
 app.geometry("500x500")
 app.title("Register")
 app.resizable(False, False)
 set_appearance_mode("light")
 app.configure(bg=BG_COLOR)
-app.protocol("WM_DELETE_WINDOW", app.destroy)  # Handle window closing
+app.protocol("WM_DELETE_WINDOW", app.destroy)
 
 CTkLabel(app, text="Create an Account", font=("Helvetica", 20)).pack(padx=50, pady=30)
 
